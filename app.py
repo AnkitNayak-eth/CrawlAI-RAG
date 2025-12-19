@@ -3,20 +3,22 @@ import requests
 
 BACKEND_URL = "http://127.0.0.1:8000"
 
-st.set_page_config(page_title="Website RAG", layout="centered")
-st.title("Website RAG Analyzer")
+st.set_page_config(page_title="CrawlAI RAG", layout="centered")
+st.title("CrawlAI RAG")
 
 # -------------------------------
 # 1. Website Ingestion
 # -------------------------------
 st.subheader("1. Index a Website")
 
-website_url = st.text_input(
-    "Enter website URL",
-    placeholder="https://example.com"
-)
+with st.form("ingest_form"):
+    website_url = st.text_input(
+        "Enter website URL",
+        placeholder="https://example.com"
+    )
+    ingest_submit = st.form_submit_button("Index Website")
 
-if st.button("Index Website"):
+if ingest_submit:
     if not website_url:
         st.warning("Please enter a website URL")
     else:
@@ -35,16 +37,18 @@ if st.button("Index Website"):
 st.divider()
 
 # -------------------------------
-# 2. Ask Questions (Text Only)
+# 2. Ask Questions (Press Enter)
 # -------------------------------
 st.subheader("2. Ask Questions")
 
-question = st.text_input(
-    "Ask something about the website",
-    placeholder="What is this website about?"
-)
+with st.form("ask_form"):
+    question = st.text_input(
+        "Ask something about the website",
+        placeholder="What is this website about?"
+    )
+    ask_submit = st.form_submit_button("Ask")
 
-if st.button("Ask"):
+if ask_submit:
     if not question:
         st.warning("Please enter a question")
     else:
@@ -56,16 +60,13 @@ if st.button("Ask"):
             )
 
         if res.status_code == 200:
-            response_json = res.json()["answer"]
+            response = res.json()["answer"]
 
-            # ✅ Extract clean text only
-            if isinstance(response_json, dict) and "result" in response_json:
-                answer_text = response_json["result"]
+            # Extract clean text
+            if isinstance(response, dict) and "result" in response:
+                answer_text = response["result"]
             else:
-                answer_text = response_json
-
-            st.markdown("### Question")
-            st.write(question)
+                answer_text = response
 
             st.markdown("### Answer")
             st.write(answer_text)
