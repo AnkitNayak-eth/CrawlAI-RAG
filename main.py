@@ -9,13 +9,7 @@ from rag.qa import get_qa_chain
 
 app = FastAPI()
 
-qa_chain = None  # global
-
-
-@app.on_event("startup")
-def startup_event():
-    global qa_chain
-    qa_chain = get_qa_chain()
+LAST_WEBSITE = None
 
 
 @app.get("/")
@@ -25,9 +19,13 @@ def root():
 
 @app.post("/ingest")
 def ingest(url: str):
+    global LAST_WEBSITE
+
     pages = crawl_website(url)
     chunks = chunk_text(pages)
-    create_vectorstore(chunks)
+    create_vectorstore(chunks, url)
+
+    LAST_WEBSITE = url
 
     return {
         "pages_scraped": len(pages),
@@ -38,5 +36,13 @@ def ingest(url: str):
 
 @app.post("/ask")
 def ask(question: str):
+    if not LAST_WEBSITE:
+        return {"answer": "No website indexed yet."}
+
+    qa_chain = get_qa_chain(LAST_WEBSITE)
     result = qa_chain.invoke(question)
-    return {"answer": result}
+
+    if isinstance(result, dict) and "result" in result:
+        return {"answer": result["result"]}
+
+    return {"answer": str(result)}

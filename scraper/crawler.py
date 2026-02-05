@@ -1,44 +1,145 @@
-import requests
-from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 from urllib.parse import urljoin, urlparse
+import time
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; WebsiteRAGBot/1.0)"
-}
 
-def is_internal_link(base_url, link):
-    return urlparse(base_url).netloc == urlparse(link).netloc
+# --------------------------------------------------
+# Progressive scroll (lazy-load safe)
+# --------------------------------------------------
+def progressive_scroll(page):
+    page.evaluate(
+        """
+        () => new Promise(resolve => {
+            let y = 0;
+            const step = 500;
+            const interval = setInterval(() => {
+                window.scrollBy(0, step);
+                y += step;
+                if (y >= document.body.scrollHeight) {
+                    clearInterval(interval);
+                    resolve();
+                }
+            }, 200);
+        })
+        """
+    )
 
-def crawl_website(start_url, max_pages=20):
+
+# --------------------------------------------------
+# Wait until DOM stabilizes
+# --------------------------------------------------
+def wait_for_dom_stability(page, max_checks=10, delay_ms=700):
+    last_len = 0
+    stable_rounds = 0
+
+    for _ in range(max_checks):
+        text = page.evaluate("() => document.body.innerText.length")
+        if abs(text - last_len) < 100:
+            stable_rounds += 1
+            if stable_rounds >= 3:
+                return
+        else:
+            stable_rounds = 0
+
+        last_len = text
+        time.sleep(delay_ms / 1000)
+
+
+# --------------------------------------------------
+# EXACT Ctrl+A → Ctrl+C extractor
+# --------------------------------------------------
+def extract_like_ctrl_a_copy(page):
+    return page.evaluate(
+        """
+        () => {
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+
+            const range = document.createRange();
+            range.selectNodeContents(document.body);
+            selection.addRange(range);
+
+            return selection.toString();
+        }
+        """
+    )
+
+
+# --------------------------------------------------
+# Main crawler (COPY-PASTE PERFECT)
+# --------------------------------------------------
+def crawl_website(start_url: str, max_pages: int = 20):
     visited = set()
-    to_visit = [start_url]
-    collected_text = []
+    queue = [start_url]
+    pages = []
 
-    while to_visit and len(visited) < max_pages:
-        url = to_visit.pop(0)
-        if url in visited:
-            continue
+    domain = urlparse(start_url).netloc
 
-        try:
-            response = requests.get(url, headers=HEADERS, timeout=10)
-            response.raise_for_status()
-        except Exception:
-            continue
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context()
 
-        visited.add(url)
-        soup = BeautifulSoup(response.text, "html.parser")
+        # Block heavy resources (safe)
+        context.route(
+            "**/*",
+            lambda route, request: route.abort()
+            if request.resource_type in ["image", "media", "font"]
+            else route.continue_()
+        )
 
-        # Remove scripts & styles
-        for tag in soup(["script", "style", "noscript"]):
-            tag.decompose()
+        page = context.new_page()
 
-        text = soup.get_text(separator=" ", strip=True)
-        if text:
-            collected_text.append(text)
+        while queue and len(visited) < max_pages:
+            url = queue.pop(0)
+            parsed = urlparse(url)
 
-        for a in soup.find_all("a", href=True):
-            next_url = urljoin(start_url, a["href"])
-            if is_internal_link(start_url, next_url):
-                to_visit.append(next_url)
+            if parsed.netloc != domain:
+                continue
 
-    return collected_text
+            clean_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+            if clean_url in visited:
+                continue
+
+            visited.add(clean_url)
+
+            try:
+                print(f"Crawling: {clean_url}")
+
+                page.goto(clean_url, wait_until="networkidle", timeout=60000)
+                page.wait_for_timeout(1000)
+
+                # Force render everything
+                progressive_scroll(page)
+                wait_for_dom_stability(page)
+
+                # 🔥 EXACT browser copy
+                copied_text = extract_like_ctrl_a_copy(page)
+
+                if copied_text.strip():
+                    pages.append(
+                        f"URL: {clean_url}\n"
+                        f"CONTENT (Ctrl+A → Ctrl+C):\n"
+                        f"{copied_text}"
+                    )
+
+                # Collect internal links
+                links = page.evaluate(
+                    """
+                    () => Array.from(document.querySelectorAll('a[href]'))
+                        .map(a => a.href)
+                    """
+                )
+
+                for href in links:
+                    p2 = urlparse(href)
+                    if p2.netloc == domain:
+                        next_url = f"{p2.scheme}://{p2.netloc}{p2.path}"
+                        if next_url not in visited:
+                            queue.append(next_url)
+
+            except Exception as e:
+                print(f"Failed {clean_url}: {e}")
+
+        browser.close()
+
+    return pages

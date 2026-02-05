@@ -8,3 +8,5 @@ requests
 sentence-transformers
 streamlit
 python-dotenv
+playwright
+langchain-groq

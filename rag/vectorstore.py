@@ -1,7 +1,15 @@
+# rag/vectorstore.py
+
+import os
+from urllib.parse import urlparse
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
-def create_vectorstore(chunks, persist_dir="vector_db"):
+
+def create_vectorstore(chunks, website_url: str, base_dir="vector_db"):
+    domain = urlparse(website_url).netloc.replace(".", "_")
+    persist_dir = os.path.join(base_dir, domain)
+
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
@@ -13,4 +21,4 @@ def create_vectorstore(chunks, persist_dir="vector_db"):
     )
 
     vectordb.persist()
-    return vectordb
+    return persist_dir
