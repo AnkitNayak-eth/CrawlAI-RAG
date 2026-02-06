@@ -70,6 +70,7 @@ def extract_like_ctrl_a_copy(page):
 # --------------------------------------------------
 def crawl_website(start_url: str, max_pages: int = 20):
     visited = set()
+    content_hashes = set()
     queue = [start_url]
     pages = []
 
@@ -97,17 +98,26 @@ def crawl_website(start_url: str, max_pages: int = 20):
                 continue
 
             clean_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+            if clean_url.endswith('/'):
+                clean_url = clean_url[:-1]
+            
+            # Skip proxy URLs or external links disguised as internal
+            if "medium.com" in clean_url or "http%3A" in clean_url or "https%3A" in clean_url:
+                print(f"Skipping external/proxy URL: {clean_url}")
+                visited.add(clean_url) # Mark as visited to avoid reprocessing
+                continue
+
             if clean_url in visited:
                 continue
 
             visited.add(clean_url)
-
+            
             try:
                 print(f"Crawling: {clean_url}")
 
                 page.goto(clean_url, wait_until="networkidle", timeout=60000)
                 page.wait_for_timeout(1000)
-
+                
                 # Force render everything
                 progressive_scroll(page)
                 wait_for_dom_stability(page)
@@ -115,25 +125,84 @@ def crawl_website(start_url: str, max_pages: int = 20):
                 # 🔥 EXACT browser copy
                 copied_text = extract_like_ctrl_a_copy(page)
 
-                if copied_text.strip():
-                    pages.append(
-                        f"URL: {clean_url}\n"
-                        f"CONTENT (Ctrl+A → Ctrl+C):\n"
-                        f"{copied_text}"
-                    )
-
+                # Deduplication check
+                import hashlib
+                content_hash = hashlib.md5(copied_text.encode('utf-8')).hexdigest()
+                if content_hash in content_hashes:
+                    print(f"Skipping duplicate content: {clean_url}")
+                    continue
+                content_hashes.add(content_hash)
+                
                 # Collect internal links
                 links = page.evaluate(
                     """
-                    () => Array.from(document.querySelectorAll('a[href]'))
-                        .map(a => a.href)
+                    () => {
+                        const links = Array.from(document.querySelectorAll('a[href]'));
+                        return links.map(a => ({
+                            text: a.innerText.trim(),
+                            href: a.href,
+                            label: a.getAttribute('aria-label') || a.getAttribute('title') || ''
+                        }));
+                    }
                     """
                 )
 
-                for href in links:
+                # Format links and append to content
+                links_text = "\n\nLinks Found:\n"
+                unique_links = set()
+                
+                # For crawling queue
+                internal_links = []
+
+                for link in links:
+                    href = link['href']
+                    text = link['text']
+                    label = link['label']
+                    
+                    # Use label/title if text is empty (common for icons)
+                    display_text = text if text else label
+                    
+                    # Dynamic fallback: Extract domain from URL if no text/label
+                    if not display_text:
+                        try:
+                            parsed_href = urlparse(href)
+                            domain_parts = parsed_href.netloc.split('.')
+                            # Handle cases like "www.linkedin.com" -> "linkedin" or "x.com" -> "x"
+                            if len(domain_parts) >= 2:
+                                # Get the main domain name (e.g. 'linkedin' from 'www.linkedin.com')
+                                # Simple heuristic: take the part before the TLD
+                                domain_name = domain_parts[-2] if domain_parts[-2] not in ['www', 'web'] else domain_parts[-3]
+                                display_text = domain_name.capitalize()
+                            else:
+                                display_text = parsed_href.netloc.capitalize()
+                        except Exception:
+                            pass
+                    
+                    # Add to displayed content if we have some identifier
+                    if display_text:
+                        full_link_str = f"[{display_text}]({href})"
+                        if full_link_str not in unique_links:
+                            links_text += f"- {full_link_str}\n"
+                            unique_links.add(full_link_str)
+                    
+                    # Collect internal links for crawling
+                    internal_links.append(href)
+
+                if copied_text.strip():
+                    final_content = (
+                        f"URL: {clean_url}\n"
+                        f"CONTENT (Ctrl+A → Ctrl+C):\n"
+                        f"{copied_text}\n"
+                        f"{links_text}"
+                    )
+                    pages.append(final_content)
+
+                for href in internal_links:
                     p2 = urlparse(href)
                     if p2.netloc == domain:
                         next_url = f"{p2.scheme}://{p2.netloc}{p2.path}"
+                        if next_url.endswith('/'):
+                            next_url = next_url[:-1]
                         if next_url not in visited:
                             queue.append(next_url)
 

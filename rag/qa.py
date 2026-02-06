@@ -37,6 +37,8 @@ Rules:
 - Do NOT repeat the question.
 - Do NOT add information not present in the context.
 - If the answer is not found in the context, say so clearly.
+- If the user asks for a link (e.g., GitHub, website), look for it in the "Links Found" section of the content.
+- If the user asks about projects, prioritize sections marked "PERSONAL PROJECT", "Featured Projects", or distinct project cards over general mentions in testimonials.
 
 Context:
 {context}
@@ -50,8 +52,8 @@ Answer:
 
     return RetrievalQA.from_chain_type(
         llm=llm,
-        retriever=vectordb.as_retriever(search_kwargs={"k": 6}),
+        retriever=vectordb.as_retriever(search_kwargs={"k": 25}),
         chain_type="stuff",
         chain_type_kwargs={"prompt": prompt},
-        return_source_documents=False
+        return_source_documents=True
     )
