@@ -1,4 +1,4 @@
-# 🚀 CrawlAI RAG
+# CrawlAI RAG
 
 **CrawlAI RAG** is an AI-powered website intelligence platform that allows users to **crawl entire websites, index their content, and ask natural-language questions** using **Retrieval-Augmented Generation (RAG)**.
 
@@ -6,36 +6,36 @@ It transforms static websites into **queryable knowledge bases**.
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-### 🌐 Website Crawling
-- Crawls all internal pages of a website
-- Extracts clean, readable text
+### Website Crawling
+- Crawls all internal pages of a website  
+- Extracts clean, readable text  
 
-### 🧠 RAG-Based Question Answering
-- Uses vector embeddings + LLM
-- Answers are grounded in website content
-- Minimizes hallucinations
+### RAG-Based Question Answering
+- Uses vector embeddings + LLM  
+- Answers are grounded in website content  
+- Minimizes hallucinations  
 
-### 📦 Multi-Website Indexing
-- Index multiple websites
-- All content stored in a shared vector database
+### Multi-Website Indexing
+- Index multiple websites  
+- All content stored in a shared vector database  
 
-### ⚡ Fast & Scalable Backend
-- Built with FastAPI
-- ChromaDB for vector storage
+### Fast & Scalable Backend
+- Built with FastAPI  
+- ChromaDB for vector storage  
 
-### 💻 Simple Frontend
-- Built with Streamlit
-- Clean, single-query interface
+### Simple Frontend
+- Built with Streamlit  
+- Clean, single-query interface  
 
-### 🔐 Secure Configuration
-- Environment variables via `.env`
-- API keys are never committed to GitHub
+### Secure Configuration
+- Environment variables via `.env`  
+- API keys are never committed to GitHub  
 
 ---
 
-## 🏗️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |------|-----------|
@@ -50,24 +50,24 @@ It transforms static websites into **queryable knowledge bases**.
 
 ---
 
-## 🧪 Usage Guide
+## Usage Guide
 
-### 1️⃣ Index a Website
+### 1. Index a Website
 1. Enter a website URL  
 2. Click **Index Website**  
 3. Website content is crawled, chunked, and embedded  
 
-### 2️⃣ Ask Questions
+### 2. Ask Questions
 Ask natural-language questions such as:
-- *What is this website about?*
-- *List all services mentioned*
-- *Who is the author?*
+- What is this website about?  
+- List all services mentioned  
+- Who is the author?  
 
 The system returns **accurate, grounded answers** based only on the indexed website content.
 
 ---
 
-## 🧠 How It Works
+## How It Works
 
 1. Website is crawled and text is extracted  
 2. Text is split into manageable chunks  
@@ -79,29 +79,26 @@ This is **true Retrieval-Augmented Generation (RAG)**.
 
 ---
 
-## 📌 Use Cases
+## Use Cases
 
-- Website documentation Q&A
-- Internal knowledge bases
-- Research and analysis
-- Client website intelligence
-- Portfolio / demo RAG application
+- Website documentation Q&A  
+- Internal knowledge bases  
+- Research and analysis  
+- Client website intelligence  
+- Portfolio / demo RAG application  
 
 ---
 
-## 👨‍💻 Author
+## Author
 
 **CrawlAI RAG**  
 Built by **Ankit Kumar Nayak**
 
 ---
 
-## ⭐ Support
+## Support
 
 If you like this project:
-- Give it a **star ⭐**
+- Give it a **star**
 - Fork it
 - Contribute or suggest improvements
-
----
-
