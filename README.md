@@ -45,7 +45,7 @@ It transforms static websites into **queryable knowledge bases**.
 | Vector Database | ChromaDB |
 | Embeddings | Sentence-Transformers |
 | LLM | Groq (LLaMA 3.3 70B) |
-| Web Scraping | BeautifulSoup |
+| Web Scraping | BeautifulSoup4 & Playwright |
 | Configuration | python-dotenv |
 
 ---
